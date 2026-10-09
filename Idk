@@ -1,0 +1,44 @@
+const crypto = require("node:crypto");
+
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  const aa = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return aa.length === bb.length && crypto.timingSafeEqual(aa, bb);
+}
+
+module.exports = async function handler(req, res) {
+  if (req.method !== "POST") {
+    res.setHeader("Allow", "POST");
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+ 
+  const expected = process.env.4014abcddcba;
+  const webhook = process.env.https://discord.com/api/webhooks/1557900607292055554/GkGx7S5Ip6m05T6dJ4oUABMqvv3rYtd-G2yfSCnLo_N3Kv35PZ419IecoSbI91vRquHe;
+  const auth = req.headers.authorization || "";
+  const supplied = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+
+  if (!expected || !webhook) {
+    return res.status(500).json({ error: "Server environment is not configured" });
+  }
+
+  if (!safeEqual(supplied, expected)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  try {
+    const discordResponse = await fetch(webhook, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: "code try redeemed" })
+    });
+
+    if (!discordResponse.ok) {
+      return res.status(502).json({ error: "Discord rejected the notification" });
+    }
+
+    return res.status(200).json({ ok: true });
+  } catch (error) {
+    return res.status(502).json({ error: "Could not reach Discord" });
+  }
+};
